@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import os
 from create_annotations import (
     create_image_annotation,
     create_annotation_from_yolo_format,
@@ -20,8 +20,58 @@ import imagesize
 YOLO_DARKNET_SUB_DIR = "YOLO_darknet"
 
 classes = [
-    "matricula",
-    "cara"
+    "10c",
+    "10d",
+    "10h",
+    "10s",
+    "2c",
+    "2d",
+    "2h",
+    "2s",
+    "3c",
+    "3d",
+    "3h",
+    "3s",
+    "4c",
+    "4d",
+    "4h",
+    "4s",
+    "5c",
+    "5d",
+    "5h",
+    "5s",
+    "6c",
+    "6d",
+    "6h",
+    "6s",
+    "7c",
+    "7d",
+    "7h",
+    "7s",
+    "8c",
+    "8d",
+    "8h",
+    "8s",
+    "9c",
+    "9d",
+    "9h",
+    "9s",
+    "Ac",
+    "Ad",
+    "Ah",
+    "As",
+    "Jc",
+    "Jd",
+    "Jh",
+    "Js",
+    "Kc",
+    "Kd",
+    "Kh",
+    "Ks",
+    "Qc",
+    "Qd",
+    "Qh",
+    "Qs",
 ]
 
 
@@ -43,7 +93,7 @@ def get_images_info_and_annotations(opt):
 
     for file_path in file_paths:
         # Check how many items have progressed
-        print("\rProcessing " + str(image_id) + " ...", end='')
+        print("\rProcessing " + str(image_id) + " ...", end="")
 
         # Build image annotation, known the image's width and height
         w, h = imagesize.get(str(file_path))
@@ -58,7 +108,9 @@ def get_images_info_and_annotations(opt):
         else:
             annotations_path = file_path.parent / label_file_name
 
-        if annotations_path.exists(): # The image may not have any applicable annotation txt file.
+        if (
+            annotations_path.exists()
+        ):  # The image may not have any applicable annotation txt file.
             with open(str(annotations_path), "r") as label_file:
                 label_read_line = label_file.readlines()
 
@@ -84,16 +136,10 @@ def get_images_info_and_annotations(opt):
                 width = int(float_width)
                 height = int(float_height)
 
-                if opt.results == True: #yolo_result to Coco_result (saves confidence)
+                if opt.results == True:  # yolo_result to Coco_result (saves confidence)
                     conf = float(label_line.split()[5])
                     annotation = create_annotation_from_yolo_results_format(
-                        min_x,
-                        min_y,
-                        width,
-                        height,
-                        image_id,
-                        category_id,
-                        conf
+                        min_x, min_y, width, height, image_id, category_id, conf
                     )
 
                 else:
@@ -120,17 +166,25 @@ def debug(opt):
     color_list = np.random.randint(low=0, high=256, size=(len(classes), 3)).tolist()
 
     # read the file
-    file = open(path, "r")
-    read_lines = file.readlines()
-    file.close()
+
+    # if path is dir, os.listdir(path) and add path to each file to list
+    read_lines = []
+    if Path(path).is_dir():
+        file_paths = sorted(Path(path).rglob("*.jpg"))
+        file_paths += sorted(Path(path).rglob("*.png"))
+        read_lines = [str(file_path) for file_path in file_paths]
+    else:
+        with open(path, "r") as fp:
+            read_lines = fp.readlines()
+            read_lines = [line.replace("\n", "") for line in read_lines]
 
     for line in read_lines:
         print("Image Path : ", line)
         # read image file
-        img_file = cv2.imread(line[:-1])
+        img_file = cv2.imread(line)
 
         # read .txt file
-        label_path = line[:-4] + "txt"
+        label_path = line[:-3] + "txt"
         label_file = open(label_path, "r")
         label_read_line = label_file.readlines()
         label_file.close()
@@ -154,6 +208,7 @@ def debug(opt):
             width = int(img_file.shape[1] * width)
             height = int(img_file.shape[0] * height)
 
+            print("cat id name :", int(category_id))
             print("class name :", classes[int(category_id)])
             print("x_upper_left : ", min_x, "\t", "y_upper_left : ", min_y)
             print("width : ", width, "\t", "\t", "height : ", height)
@@ -192,10 +247,16 @@ def get_args():
         help="Visualize bounding box and print annotation information",
     )
     parser.add_argument(
-        "--output",
+        "--output-name",
         default="train_coco.json",
         type=str,
-        help="Name the output json file",
+        help="Name the output annotation json file",
+    )
+    parser.add_argument(
+        "--output-path",
+        default="output",
+        type=str,
+        help="path for the output annotaiton json file",
     )
     parser.add_argument(
         "--yolo-subdir",
@@ -209,18 +270,17 @@ def get_args():
         "that matches replicates the bounding box data.",
     )
     parser.add_argument(
-    "--results",
-    action="store_true",
-    help="Saves confidence scores of the results"
-    "yolo results to Coco results.",
+        "--results",
+        action="store_true",
+        help="Saves confidence scores of the results" "yolo results to Coco results.",
     )
     args = parser.parse_args()
     return args
 
 
 def main(opt):
-    output_name = opt.output
-    output_path = "output/" + output_name
+    output_name = opt.output_name
+    output_path = os.path.join(opt.output_path, output_name)
 
     print("Start!")
 
@@ -235,7 +295,7 @@ def main(opt):
 
         for index, label in enumerate(classes):
             categories = {
-                "supercategory": "Defect",
+                "supercategory": "cards",
                 "id": index + 1,  # ID starts with '1' .
                 "name": label,
             }
